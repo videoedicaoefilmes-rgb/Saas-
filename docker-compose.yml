@@ -40,11 +40,14 @@ services:
     healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
 
   # Armazenamento compatível com S3 (bucket privado: exige as credenciais acima).
+  # Volumes internos de 1 GB e quantidade automática conforme o disco livre
+  # (os padrões do SeaweedFS são pensados para servidores grandes e esgotam rápido).
   s3:
     image: chrislusf/seaweedfs:4.01
     command: >
       server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
       -s3.allowedOrigins=http://localhost:3000
+      -master.volumeSizeLimitMB=1024 -volume.max=0
     ports: ["8333:8333"]
     volumes:
       - s3data:/data
@@ -58,7 +61,19 @@ services:
   s3-init:
     image: chrislusf/seaweedfs:4.01
     depends_on: { s3: { condition: service_healthy } }
-    entrypoint: ["/bin/sh", "-c", "echo 's3.bucket.create -name gm-clips' | weed shell -master=s3:9333"]
+    # Tenta até o servidor estar pronto; falha de forma visível se não conseguir em ~2 minutos.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        for i in $$(seq 1 60); do
+          echo 's3.bucket.create -name gm-clips' | weed shell -master=s3:9333 > /tmp/out 2>&1
+          if echo 's3.bucket.list' | weed shell -master=s3:9333 2>/dev/null | grep -q gm-clips; then
+            echo "bucket gm-clips pronto"; exit 0
+          fi
+          sleep 2
+        done
+        cat /tmp/out; echo "ERRO: não foi possível criar o bucket gm-clips"; exit 1
     restart: "no"
 
   migrate:

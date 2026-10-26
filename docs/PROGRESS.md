@@ -32,8 +32,8 @@ Total: 119 testes Vitest + 5 E2E.
 
 ## Limitações conhecidas / pendências
 
-- **Docker não foi executado**: o ambiente desta sessão não permite rodar o daemon. `Dockerfile` e `docker-compose.yml` estão escritos, mas não testados. Os testes usaram PostgreSQL/Redis instalados localmente.
-- **MinIO/S3 real não testado**: o driver S3 foi testado contra o simulador "moto", que não valida assinaturas. Validar com MinIO (docker compose) e com o provedor escolhido, incluindo CORS do bucket.
+- **Docker validado (sessão 1, parte 2):** `docker compose` sobe banco, Redis, armazenamento S3 (SeaweedFS), migrações, web e worker; o teste completo no navegador passou 2 vezes seguidas contra essa instalação, com upload direto ao S3. Ressalva: no ambiente de testes o FFmpeg da imagem veio de uma imagem pronta do Docker Hub (o repositório de pacotes do Debian estava bloqueado na rede); numa máquina normal o `Dockerfile` instala pelo Debian, como escrito.
+- **Provedor S3 real (R2/AWS) ainda não testado**: validado com SeaweedFS (assinaturas verificadas: link adulterado e credencial errada → 403; bucket inacessível sem credenciais). Falta repetir com o provedor escolhido, incluindo CORS.
 - Upload em um único PUT (limite padrão 2 GiB); multipart/resumível pendente.
 - Sem provedor de pagamento (por decisão: nada de cobrança real sem autorização). Compra de créditos aparece como "ainda não disponível".
 - E-mail: somente modo console testado; SMTP implementado mas não testado com provedor real.
@@ -48,7 +48,7 @@ Total: 119 testes Vitest + 5 E2E.
 ## Próximo passo recomendado
 
 1. ~~Conectar um repositório GitHub~~ ✅ código em github.com/videoedicaoefilmes-rgb/Saas- (branch `main`).
-2. Rodar `docker compose up --build` numa máquina com Docker e executar o checklist de homologação abaixo.
+2. (Opcional) Rodar no seu computador seguindo `docs/GUIA_DOCKER.md` e executar o checklist de homologação abaixo.
 3. Decidir a hospedagem (DEPLOYMENT.md) → homologação → medir custo por minuto → definir preços.
 4. Escolher o provedor de pagamento (Pix + cartão) e implementar o webhook.
 
@@ -72,6 +72,16 @@ Total: 119 testes Vitest + 5 E2E.
 - [ ] Exclusão de projeto e de conta remove os arquivos do bucket
 - [ ] Retenção: reduzir `RETENTION_*_DAYS` para 1 e verificar a limpeza
 
+## Defeitos encontrados e corrigidos ao testar no Docker
+
+1. A construção da imagem exigia senhas que (corretamente) não vão para dentro dela → o build agora usa valores provisórios só durante a construção.
+2. Algumas páginas "congelavam" o nome do app e prazos no momento do build → todas leem a configuração em execução.
+3. O `pnpm` tentava se baixar a cada execução, sem permissão → já vem instalado na imagem.
+4. A regra de segurança do navegador (CSP) era calculada no build e bloqueava o envio ao S3 → agora é aplicada em execução pelo `src/proxy.ts`.
+5. As imagens do MinIO deixaram de ser publicadas no Docker Hub → trocado por SeaweedFS (código aberto, compatível com S3).
+6. O SeaweedFS esgotava seus "volumes" internos com os padrões de fábrica → limites ajustados.
+7. A criação do bucket podia falhar em silêncio se o servidor ainda não estivesse pronto → agora tenta de novo e falha de forma visível.
+
 ## Histórico
 
-- **Sessão 1 (2026-10-26):** planejamento, fundação, todo o MVP v1, testes e documentação.
+- **Sessão 1 (2026-10-26):** planejamento, fundação, todo o MVP v1, testes e documentação; código publicado no GitHub; validação com Docker (7 correções) e guia `docs/GUIA_DOCKER.md` para não programadores.

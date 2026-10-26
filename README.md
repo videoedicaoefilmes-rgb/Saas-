@@ -51,7 +51,7 @@ docker compose up --build
 ```
 
 Sobe PostgreSQL, Redis, SeaweedFS (armazenamento S3 local, bucket privado), migrações, web (porta 3000) e worker (com limite de CPU/memória).
-Validado em 2026-10-26 (ver docs/PROGRESS.md para o estado do teste completo nesta instalação).
+Validado em 2026-10-26: o teste completo no navegador passou contra esta instalação.
 
 Não é programador? Veja o passo a passo em [docs/GUIA_DOCKER.md](docs/GUIA_DOCKER.md).
 

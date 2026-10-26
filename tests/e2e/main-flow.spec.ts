@@ -180,9 +180,9 @@ test.describe.serial("fluxo principal do MVP", () => {
     const anon = await browser.newContext();
     const res = await anon.request.get(`/api/downloads/export/${exportIds[0]}`, { maxRedirects: 0 });
     expect(res.status()).toBe(401);
-    // Token de armazenamento adulterado é recusado
+    // Token de armazenamento adulterado é recusado (403 com armazenamento local; 404 com S3, rota desligada)
     const forged = await anon.request.get(`/api/storage/local?t=abc.def`);
-    expect(forged.status()).toBe(403);
+    expect([403, 404]).toContain(forged.status());
     await anon.close();
   });
 
