@@ -1,0 +1,568 @@
+// GM Sports Clips — modelo de dados (PostgreSQL)
+// Documentação: docs/DATABASE.md
+// Convenção: models em PascalCase, tabelas em snake_case via @@map.
+// Valores monetários em centavos (Int). Créditos são inteiros.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Autenticação (tabelas exigidas pelo Better Auth)
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          UserRole @default(USER)
+
+  /// Versão dos termos/privacidade aceitos no cadastro (registro de consentimento).
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions           Session[]
+  accounts           Account[]
+  projects           Project[]
+  mediaAssets        MediaAsset[]
+  processingJobs     ProcessingJob[]
+  exports            Export[]
+  wallet             CreditWallet?
+  creditTransactions CreditTransaction[] @relation("TransactionOwner")
+  actedTransactions  CreditTransaction[] @relation("TransactionActor")
+  subscriptions      Subscription[]
+  payments           Payment[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Projetos, mídia e lances
+// ─────────────────────────────────────────────────────────────
+
+enum CutMode {
+  /// Recodifica (H.264/AAC). Corte no quadro exato. Mais lento.
+  PRECISE
+  /// Copia os fluxos sem recodificar. Muito rápido, mas o início
+  /// "encaixa" no keyframe anterior (pode começar alguns segundos antes).
+  FAST
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  athleteName String?
+  teamName    String?
+  matchName   String?
+  matchDate   DateTime? @db.Date
+  cutMode     CutMode   @default(PRECISE)
+  /// Margem aplicada a todos os lances (milissegundos).
+  paddingBeforeMs Int @default(0)
+  paddingAfterMs  Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mediaAssets    MediaAsset[]
+  clips          Clip[]
+  processingJobs ProcessingJob[]
+  exports        Export[]
+
+  @@index([userId, createdAt])
+  @@map("projects")
+}
+
+enum MediaAssetStatus {
+  /// URL de envio emitida; aguardando o cliente concluir o upload.
+  PENDING_UPLOAD
+  /// Upload concluído; aguardando validação/extração de metadados.
+  UPLOADED
+  PROBING
+  /// Validado e pronto para marcação e processamento.
+  READY
+  /// Arquivo inválido ou incompatível (ver rejectionReason).
+  REJECTED
+  /// Removido do armazenamento (retenção ou pedido do usuário).
+  DELETED
+}
+
+enum MediaSource {
+  /// Upload direto do usuário (único habilitado no MVP).
+  UPLOAD
+  /// Reservado para importações futuras via APIs oficiais/autorizadas.
+  EXTERNAL_IMPORT
+}
+
+model MediaAsset {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  source    MediaSource      @default(UPLOAD)
+  status    MediaAssetStatus @default(PENDING_UPLOAD)
+
+  /// Chave no armazenamento de objetos. Gerada pelo servidor — nunca a partir do nome do arquivo.
+  storageKey       String  @unique
+  /// Nome original sanitizado, apenas para exibição.
+  originalFilename String
+  declaredMimeType String
+  sizeBytes        BigInt
+  rejectionReason  String?
+
+  // Metadados técnicos (ffprobe)
+  durationMs  Int?
+  width       Int?
+  height      Int?
+  fps         Float?
+  videoCodec  String?
+  audioCodec  String?
+  formatName  String?
+  bitRate     Int?
+
+  /// Declaração do usuário de que possui autorização para usar o vídeo.
+  rightsConfirmedAt DateTime
+  uploadedAt        DateTime?
+  probedAt          DateTime?
+  /// Data a partir da qual o arquivo pode ser removido pela política de retenção.
+  expiresAt         DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  processingJobs ProcessingJob[]
+
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+  @@map("media_assets")
+}
+
+enum ClipCategory {
+  GOAL
+  ASSIST
+  SHOT
+  SAVE
+  TACKLE
+  DRIBBLE
+  PASS
+  OTHER
+}
+
+model Clip {
+  id        String        @id @default(cuid())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  position  Int
+  startMs   Int
+  endMs     Int
+  title     String?
+  category  ClipCategory?
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  exports Export[]
+
+  @@index([projectId, position])
+  @@map("clips")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Processamento
+// ─────────────────────────────────────────────────────────────
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum JobCreditStatus {
+  /// Créditos reservados (debitados) e aguardando conclusão.
+  HELD
+  /// Consumo confirmado após sucesso.
+  CAPTURED
+  /// Créditos devolvidos após falha definitiva.
+  REFUNDED
+}
+
+model ProcessingJob {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceAssetId String
+  sourceAsset   MediaAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  status         JobStatus @default(QUEUED)
+  cutMode        CutMode
+  /// Chave enviada pelo cliente para evitar processamento duplicado (duplo clique, reenvio).
+  idempotencyKey String
+
+  clipCount       Int
+  /// Segundos cobráveis (soma dos lances com margens), base da cobrança.
+  billableSeconds Int
+  creditsCharged  Int
+  creditStatus    JobCreditStatus @default(HELD)
+  /// Regra de preço vigente no momento da cobrança (auditoria).
+  pricingSnapshot Json
+
+  attempts     Int     @default(0)
+  errorCode    String?
+  /// Mensagem segura para exibir ao usuário.
+  errorMessage String?
+
+  queuedAt     DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  /// Tempo de parede gasto no processamento (ms).
+  processingMs Int?
+  outputBytes  BigInt?
+  /// Estimativa de custo de infraestrutura em centavos de BRL — só preenchida se a taxa estiver configurada.
+  estimatedCostCents Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exports            Export[]
+  creditTransactions CreditTransaction[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([projectId, createdAt])
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("processing_jobs")
+}
+
+enum ExportKind {
+  CLIP
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  DELETED
+}
+
+/// Arquivo gerado por um processamento (no MVP: um MP4 por lance).
+model Export {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       ProcessingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  clipId    String?
+  clip      Clip?         @relation(fields: [clipId], references: [id], onDelete: SetNull)
+  kind      ExportKind    @default(CLIP)
+  status    ExportStatus  @default(PENDING)
+
+  /// Cópia dos dados do lance no momento do processamento (edições posteriores não afetam).
+  position  Int
+  startMs   Int
+  endMs     Int
+  title     String?
+  category  ClipCategory?
+
+  /// Nome de download padronizado, ex.: joao_final_lance_001.mp4
+  filename     String
+  storageKey   String    @unique
+  sizeBytes    BigInt?
+  durationMs   Int?
+  errorMessage String?
+  completedAt  DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([jobId, position])
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+  @@map("exports")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Créditos (livro-razão auditável)
+// ─────────────────────────────────────────────────────────────
+
+model CreditWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Saldo disponível. Mantido em transação junto com o lançamento; CHECK (balance >= 0) no banco.
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions CreditTransaction[]
+
+  @@map("credit_wallets")
+}
+
+enum CreditTransactionType {
+  SIGNUP_BONUS
+  TEST_GRANT
+  PURCHASE
+  SUBSCRIPTION_GRANT
+  PROMO_GRANT
+  ADMIN_ADJUSTMENT
+  PROCESSING_HOLD
+  PROCESSING_CAPTURE
+  PROCESSING_REFUND
+  EXPIRATION
+}
+
+model CreditTransaction {
+  id             String                @id @default(cuid())
+  walletId       String
+  wallet         CreditWallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                  @relation("TransactionOwner", fields: [userId], references: [id], onDelete: Cascade)
+  type           CreditTransactionType
+  /// Valor com sinal: positivo credita, negativo debita. CAPTURE tem valor 0 (marco contábil).
+  amount         Int
+  balanceAfter   Int
+  /// Garante que a mesma operação nunca seja lançada duas vezes.
+  idempotencyKey String                @unique
+  jobId          String?
+  job            ProcessingJob?        @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  paymentId      String?
+  payment        Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  /// Usuário que executou a ação (ex.: administrador em ajustes manuais).
+  actorUserId    String?
+  actor          User?                 @relation("TransactionActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  reason         String?
+  /// Reservado para política de expiração de créditos (ainda não aplicada no MVP).
+  expiresAt      DateTime?
+  createdAt      DateTime              @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([userId, createdAt])
+  @@index([jobId])
+  @@index([type, createdAt])
+  @@map("credit_transactions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Planos, assinaturas e pagamentos (estrutura preparada — sem cobrança real no MVP)
+// ─────────────────────────────────────────────────────────────
+
+enum PlanKind {
+  CREDIT_PACK
+  SUBSCRIPTION
+  PROFESSIONAL
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+model Plan {
+  id               String           @id @default(cuid())
+  code             String           @unique
+  name             String
+  kind             PlanKind
+  priceCents       Int
+  currency         String           @default("BRL")
+  credits          Int
+  interval         BillingInterval?
+  creditExpiryDays Int?
+  active           Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId                 String
+  plan                   Plan               @relation(fields: [planId], references: [id])
+  status                 SubscriptionStatus @default(PENDING)
+  provider               String
+  providerSubscriptionId String?
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAt               DateTime?
+  canceledAt             DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  payments Payment[]
+
+  @@unique([provider, providerSubscriptionId])
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  PIX
+  CARD
+  OTHER
+}
+
+model Payment {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId            String?
+  plan              Plan?          @relation(fields: [planId], references: [id])
+  subscriptionId    String?
+  subscription      Subscription?  @relation(fields: [subscriptionId], references: [id])
+  provider          String
+  providerPaymentId String
+  method            PaymentMethod
+  status            PaymentStatus  @default(PENDING)
+  amountCents       Int
+  currency          String         @default("BRL")
+  creditsToGrant    Int
+  /// Preenchido quando os créditos foram concedidos (garante concessão única).
+  creditsGrantedAt  DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  creditTransactions CreditTransaction[]
+
+  @@unique([provider, providerPaymentId])
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+/// Registro de webhooks recebidos — a unicidade evita processar o mesmo evento duas vezes.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String
+  type        String
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([provider, eventId])
+  @@map("webhook_events")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auditoria e configuração
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+/// Configurações operacionais editáveis pelo painel administrativo.
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_settings")
+}
