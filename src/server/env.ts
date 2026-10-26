@@ -91,7 +91,9 @@ const envSchema = z
     if (env.MAIL_DRIVER === "smtp" && !env.SMTP_HOST) {
       ctx.addIssue({ code: "custom", path: ["SMTP_HOST"], message: "Obrigatório quando MAIL_DRIVER=smtp" });
     }
-    if (env.NODE_ENV === "production" && env.MAIL_DRIVER === "console") {
+    const isBuild = process.env.NEXT_PHASE === "phase-production-build";
+    const isLocalhost = ["localhost", "127.0.0.1"].includes(new URL(env.APP_URL).hostname);
+    if (env.NODE_ENV === "production" && env.MAIL_DRIVER === "console" && !isBuild && !isLocalhost) {
       ctx.addIssue({
         code: "custom",
         path: ["MAIL_DRIVER"],

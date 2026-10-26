@@ -42,7 +42,6 @@ export function zipFilename(opts: { athleteName?: string | null; matchName?: str
 /** Nome original apenas para exibição: remove caminhos e caracteres de controle. */
 export function sanitizeDisplayFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "";
-  // eslint-disable-next-line no-control-regex
   const cleaned = base.replace(/[\u0000-\u001f\u007f<>:"|?*]/g, "").trim();
   return (cleaned || "video").slice(0, 200);
 }
