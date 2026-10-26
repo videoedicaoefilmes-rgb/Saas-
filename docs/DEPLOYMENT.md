@@ -10,7 +10,7 @@
 | Worker | Node 22 + FFmpeg, 2+ vCPU, 2+ GB RAM, disco temporário ≥ 2× maior corte | CPU é o gargalo; escalar por número de workers |
 | PostgreSQL 16 | Gerenciado de preferência (backups, PITR) | |
 | Redis 7 | `maxmemory-policy noeviction`, persistência AOF | Usado só pela fila |
-| Armazenamento S3 | Bucket privado + CORS para o domínio do app | R2, S3, B2, MinIO |
+| Armazenamento S3 | Bucket privado + CORS para o domínio do app | R2, S3, B2 (local: SeaweedFS) |
 | SMTP | Para recuperação de senha | Qualquer provedor transacional |
 
 A imagem Docker (`Dockerfile`) serve web e worker; o comando define o papel. Rode `pnpm db:deploy` (migrações) antes de subir novas versões.

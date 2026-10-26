@@ -109,7 +109,18 @@ let cached: Env | null = null;
 
 export function getEnv(): Env {
   if (cached) return cached;
-  const parsed = envSchema.safeParse(process.env);
+  // Durante `next build` os segredos não existem (e não devem existir) na imagem:
+  // usamos valores provisórios só para o build. Em execução, tudo é validado de verdade.
+  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
+  const source = isBuild
+    ? {
+        DATABASE_URL: "postgresql://build:build@localhost:5432/build",
+        BETTER_AUTH_SECRET: "build-placeholder-secret-not-used-at-runtime",
+        STORAGE_SIGNING_SECRET: "build-placeholder-secret-not-used-at-runtime",
+        ...process.env,
+      }
+    : process.env;
+  const parsed = envSchema.safeParse(source);
   if (!parsed.success) {
     const details = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Configuração de ambiente inválida:\n${details}`);

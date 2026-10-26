@@ -50,15 +50,17 @@ cp .env.example .env   # troque os segredos
 docker compose up --build
 ```
 
-Sobe PostgreSQL, Redis, MinIO (S3 local, bucket privado), migrações, web (porta 3000) e worker (com limite de CPU/memória).
-⚠️ O `docker-compose.yml` foi escrito mas ainda não executado (ver [docs/PROGRESS.md](docs/PROGRESS.md)).
+Sobe PostgreSQL, Redis, SeaweedFS (armazenamento S3 local, bucket privado), migrações, web (porta 3000) e worker (com limite de CPU/memória).
+Validado em 2026-10-26 (ver docs/PROGRESS.md para o estado do teste completo nesta instalação).
+
+Não é programador? Veja o passo a passo em [docs/GUIA_DOCKER.md](docs/GUIA_DOCKER.md).
 
 ## Testes
 
 ```bash
 pnpm test              # unitários + integração (usa .env.test, banco gm_clips_test, Redis e FFmpeg reais)
 pnpm build && pnpm test:e2e   # fluxo completo no navegador (banco gm_clips_e2e)
-S3_TEST_ENDPOINT=http://localhost:9000 S3_TEST_KEY=minioadmin S3_TEST_SECRET=minioadmin pnpm test tests/integration/storage-s3.test.ts
+S3_TEST_ENDPOINT=http://localhost:8333 S3_TEST_KEY=gmclips-local S3_TEST_SECRET=gmclips-local-secret pnpm test tests/integration/storage-s3.test.ts
 ```
 
 Crie os bancos de teste uma vez: `createdb gm_clips_test` e `createdb gm_clips_e2e` (mesmo usuário do `.env.test`).

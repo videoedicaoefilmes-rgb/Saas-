@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "app-local",
+      "credentials": [{ "accessKey": "gmclips-local", "secretKey": "gmclips-local-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

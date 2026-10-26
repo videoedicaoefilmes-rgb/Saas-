@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { getEnv } from "@/server/env";
 import "./globals.css";
 
+// Todas as páginas leem configuração de execução (nome do app, prazos); nada é congelado no build.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const name = getEnv().APP_NAME;
   return {
