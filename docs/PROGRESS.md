@@ -47,7 +47,7 @@ Total: 119 testes Vitest + 5 E2E.
 
 ## Próximo passo recomendado
 
-1. **Conectar um repositório GitHub** para guardar o código (este ambiente é temporário).
+1. ~~Conectar um repositório GitHub~~ ✅ código em github.com/videoedicaoefilmes-rgb/Saas- (branch `main`).
 2. Rodar `docker compose up --build` numa máquina com Docker e executar o checklist de homologação abaixo.
 3. Decidir a hospedagem (DEPLOYMENT.md) → homologação → medir custo por minuto → definir preços.
 4. Escolher o provedor de pagamento (Pix + cartão) e implementar o webhook.

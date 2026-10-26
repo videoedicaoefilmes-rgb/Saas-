@@ -46,4 +46,4 @@ Após criar páginas novas, rode `npx next typegen` para os tipos `PageProps<"/r
 - Fluxo de vídeo e custos: `docs/ARCHITECTURE.md` · Modelo: `docs/DATABASE.md` · Riscos: `docs/SECURITY.md`
 
 ## Próximos passos (ver PROGRESS.md)
-Repositório GitHub → testar docker compose/MinIO → escolher infraestrutura (com aprovação) → medir custo → pagamentos (Pix/cartão, com aprovação) → multipart → compilação em vídeo único.
+Testar docker compose/MinIO → escolher infraestrutura (com aprovação) → medir custo → pagamentos (Pix/cartão, com aprovação) → multipart → compilação em vídeo único.
