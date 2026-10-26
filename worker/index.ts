@@ -1,5 +1,4 @@
-process.env.SERVICE_NAME ??= "worker";
-
+import "./bootstrap";
 import { Worker } from "bullmq";
 import { getEnv } from "@/server/env";
 import { logger } from "@/server/logger";

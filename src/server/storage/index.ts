@@ -13,6 +13,7 @@ export function getStorage(): StorageDriver {
   if (env.STORAGE_DRIVER === "s3") {
     instance = new S3Storage(env.S3_BUCKET!, {
       endpoint: env.S3_ENDPOINT,
+      publicEndpoint: env.S3_PUBLIC_ENDPOINT,
       region: env.S3_REGION,
       accessKeyId: env.S3_ACCESS_KEY_ID!,
       secretAccessKey: env.S3_SECRET_ACCESS_KEY!,

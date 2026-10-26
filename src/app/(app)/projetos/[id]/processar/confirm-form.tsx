@@ -19,7 +19,7 @@ export function ConfirmForm({ projectId, expectedCredits, idempotencyKey }: { pr
       <input type="hidden" name="expectedCredits" value={expectedCredits} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <FormResult state={state} />
-      <SubmitButton size="lg" pendingText="Iniciando..." className="w-full">
+      <SubmitButton size="lg" pendingText="Iniciando..." className="h-auto w-full whitespace-normal py-3 text-center">
         <Scissors />
         Confirmar e processar ({credits(expectedCredits)})
       </SubmitButton>

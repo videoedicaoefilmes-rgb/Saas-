@@ -21,17 +21,29 @@ import type { ObjectInfo, StorageDriver, UploadTarget } from "./types";
 export class S3Storage implements StorageDriver {
   readonly name = "s3" as const;
   private readonly client: S3Client;
+  /** Cliente usado só para assinar URLs entregues ao navegador (endereço público). */
+  private readonly publicClient: S3Client;
 
   constructor(
     private readonly bucket: string,
-    config: { endpoint?: string; region: string; accessKeyId: string; secretAccessKey: string; forcePathStyle: boolean },
+    config: {
+      endpoint?: string;
+      publicEndpoint?: string;
+      region: string;
+      accessKeyId: string;
+      secretAccessKey: string;
+      forcePathStyle: boolean;
+    },
   ) {
-    this.client = new S3Client({
-      region: config.region,
-      endpoint: config.endpoint || undefined,
-      forcePathStyle: config.forcePathStyle,
-      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-    });
+    const make = (endpoint?: string) =>
+      new S3Client({
+        region: config.region,
+        endpoint: endpoint || undefined,
+        forcePathStyle: config.forcePathStyle,
+        credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+      });
+    this.client = make(config.endpoint);
+    this.publicClient = config.publicEndpoint ? make(config.publicEndpoint) : this.client;
   }
 
   async createUploadTarget(key: string, opts: { contentType: string; sizeBytes: number; ttlSeconds: number }): Promise<UploadTarget> {
@@ -44,7 +56,7 @@ export class S3Storage implements StorageDriver {
       ContentType: opts.contentType,
       ContentLength: opts.sizeBytes,
     });
-    const url = await getSignedUrl(this.client, command, {
+    const url = await getSignedUrl(this.publicClient, command, {
       expiresIn: opts.ttlSeconds,
       signableHeaders: new Set(["content-type", "content-length"]),
     });
@@ -64,7 +76,7 @@ export class S3Storage implements StorageDriver {
       ResponseContentDisposition: opts.downloadFilename ? contentDisposition(opts.downloadFilename) : undefined,
       ResponseContentType: opts.contentType,
     });
-    return getSignedUrl(this.client, command, { expiresIn: opts.ttlSeconds });
+    return getSignedUrl(this.publicClient, command, { expiresIn: opts.ttlSeconds });
   }
 
   async head(key: string): Promise<ObjectInfo | null> {
@@ -87,7 +99,9 @@ export class S3Storage implements StorageDriver {
 
   async ffmpegInput(key: string, ttlSeconds: number): Promise<string> {
     // O FFmpeg lê por HTTP com requisições Range: só baixa os trechos necessários.
-    return this.createDownloadUrl(key, { ttlSeconds });
+    // Usa o endereço interno (o worker pode estar numa rede diferente do navegador).
+    assertSafeKey(key);
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn: ttlSeconds });
   }
 
   async putFile(key: string, localPath: string, contentType: string): Promise<void> {

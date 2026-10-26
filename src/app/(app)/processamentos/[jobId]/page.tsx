@@ -68,10 +68,10 @@ export default async function JobPage({ params }: PageProps<"/processamentos/[jo
           {job.status === "FAILED" && (
             <Alert tone="error" title="O processamento não foi concluído">
               {job.errorMessage}
-              {job.creditStatus === "REFUNDED" && <> ({credits(job.creditsCharged)} devolvido(s) ao seu saldo.)</>}
+              {job.creditStatus === "REFUNDED" && job.creditsCharged > 0 && <> ({credits(job.creditsCharged)} {job.creditsCharged === 1 ? "devolvido" : "devolvidos"} ao seu saldo.)</>}
             </Alert>
           )}
-          {job.status === "SUCCEEDED" && <Alert tone="success">Pronto! {credits(job.creditsCharged)} consumido(s).</Alert>}
+          {job.status === "SUCCEEDED" && <Alert tone="success">Pronto! {credits(job.creditsCharged)} {job.creditsCharged === 1 ? "consumido" : "consumidos"}.</Alert>}
         </CardContent>
       </Card>
 
@@ -85,7 +85,7 @@ export default async function JobPage({ params }: PageProps<"/processamentos/[jo
             {job.exports.map((e) => (
               <li key={e.id} className="flex flex-col overflow-hidden rounded-lg border border-border">
                 {previews.get(e.id) ? (
-                  <video src={previews.get(e.id)} controls preload="none" playsInline className="aspect-video w-full bg-black" />
+                  <video src={previews.get(e.id)} controls preload="metadata" playsInline className="aspect-video w-full bg-black" />
                 ) : (
                   <div className="grid aspect-video place-items-center bg-muted text-sm text-muted-foreground">
                     {e.status === "FAILED" ? "Falhou" : e.status === "DELETED" ? "Expirado" : e.status === "PROCESSING" ? "Cortando..." : "Aguardando"}

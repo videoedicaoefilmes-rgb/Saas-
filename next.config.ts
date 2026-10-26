@@ -5,7 +5,7 @@ const isDev = process.env.NODE_ENV !== "production";
 // Origem do armazenamento S3 (uploads diretos e reprodução de vídeo pelo navegador).
 function storageOrigin(): string {
   if (process.env.STORAGE_DRIVER !== "s3") return "";
-  const endpoint = process.env.S3_ENDPOINT;
+  const endpoint = process.env.S3_PUBLIC_ENDPOINT || process.env.S3_ENDPOINT;
   if (endpoint) {
     try {
       const url = new URL(endpoint);
