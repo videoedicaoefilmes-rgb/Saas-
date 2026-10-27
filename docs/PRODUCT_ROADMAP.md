@@ -19,6 +19,19 @@ Conta → projeto → upload → marcação manual → custo em créditos → pr
 - Processamento em lote; duplicar projeto; pastas por cliente/atleta.
 - Notificação por e-mail quando o processamento terminar.
 
+## v1.5 — Sugestão automática de lances do atleta (PRIORIDADE definida pelo fundador em 27/10/2026)
+
+Decisão do fundador após testar o MVP: o produto precisa identificar o atleta e sugerir **todos os lances em que ele toca na bola**, para **qualquer posição** (não só goleiro).
+
+Fluxo proposto ("sugere e o usuário confere"):
+1. Usuário informa cor da camisa e número e clica no atleta em um quadro (pode clicar de novo se o rastreamento se perder).
+2. Worker rastreia atleta e bola; momentos de contato viram lances candidatos (toques próximos agrupados, com margem).
+3. Sugestões aparecem no editor de lances para aprovar/descartar; corte, cobrança e downloads reaproveitam o MVP.
+
+Antes de construir: **teste de precisão** com 2–3 vídeos reais (pasta "Teste atleta" no Google Drive do fundador) e lista de toques marcada à mão como gabarito. Medir acertos, toques perdidos e sugestões erradas por tipo de filmagem (celular no nível do campo, celular na arquibancada, câmera fixa, vídeo editado). Comparar processamento próprio (modelos abertos) × API de visão de terceiros (custo e privacidade — vídeos com menores).
+
+Tipos de filmagem recebidos: celular na arquibancada, **celular no nível do campo** (caso mais difícil), câmera fixa de campo inteiro, transmissão/vídeo editado.
+
 ## v2 — Assistência automática (pesquisa, sem promessas)
 Cada item exige protótipo e avaliação de precisão com vídeos reais antes de virar funcionalidade:
 - Detecção de eventos (gol, finalização) por áudio/visão para **sugerir** lances que o usuário revisa.
