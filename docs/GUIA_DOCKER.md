@@ -126,6 +126,7 @@ Neste modo de teste os e-mails não são enviados de verdade: eles aparecem escr
 | `env file ... .env not found` | Faltou o Passo 4 (criar o `.env`). Confira se você está na pasta certa. |
 | `port is already allocated` / `porta já em uso` | Outro programa usa a mesma porta (3000, 5432, 6379 ou 8333). Feche-o ou reinicie o computador e tente de novo. |
 | A página `localhost:3000` não abre | Espere mais um pouco: na primeira vez demora. Veja se o terminal ainda está trabalhando. |
+| Mensagens repetidas `FATAL: database "gmclips" does not exist` | Era só um aviso do teste automático do banco (corrigido na versão de 27/10/2026). Não impede o sistema de funcionar: abra http://localhost:3000. |
 | O vídeo é recusado | O sistema aceita MP4/MOV com vídeo H.264 ou H.265. A mensagem na tela diz o motivo. |
 | O vídeo não aparece no player do editor | Alguns navegadores não tocam H.265 (comum em iPhone). Digite os horários manualmente — o corte funciona normalmente. |
 
