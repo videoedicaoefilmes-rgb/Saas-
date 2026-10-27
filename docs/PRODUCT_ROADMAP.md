@@ -28,6 +28,10 @@ Fluxo proposto ("sugere e o usuário confere"):
 2. Worker rastreia atleta e bola; momentos de contato viram lances candidatos (toques próximos agrupados, com margem).
 3. Sugestões aparecem no editor de lances para aprovar/descartar; corte, cobrança e downloads reaproveitam o MVP.
 
+Regras definidas pelo fundador (27/10/2026):
+- **Saída = só os recortes** dos toques na bola; nenhuma marcação visual (seta/círculo/destaque) sobre o atleta no vídeo gerado. A identificação do atleta (cor, número, clique) é apenas entrada para o sistema.
+- **Prioridade: não perder toques (recall alto).** Na dúvida, incluir o lance; alguns cortes a mais onde o atleta só estava perto são aceitáveis. Meta de avaliação: maximizar toques encontrados, mantendo as sugestões erradas num nível que a revisão manual absorva.
+
 Antes de construir: **teste de precisão** com 2–3 vídeos reais (pasta "Teste atleta" no Google Drive do fundador) e lista de toques marcada à mão como gabarito. Medir acertos, toques perdidos e sugestões erradas por tipo de filmagem (celular no nível do campo, celular na arquibancada, câmera fixa, vídeo editado). Comparar processamento próprio (modelos abertos) × API de visão de terceiros (custo e privacidade — vídeos com menores).
 
 Tipos de filmagem recebidos: celular na arquibancada, **celular no nível do campo** (caso mais difícil), câmera fixa de campo inteiro, transmissão/vídeo editado.
