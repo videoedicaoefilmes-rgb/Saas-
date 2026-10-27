@@ -124,6 +124,9 @@ model Project {
   /// Margem aplicada a todos os lances (milissegundos).
   paddingBeforeMs Int @default(0)
   paddingAfterMs  Int @default(0)
+  /// Identificação do atleta para a sugestão automática de lances (opcional).
+  jerseyColor  String?
+  jerseyNumber String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,6 +135,7 @@ model Project {
   clips          Clip[]
   processingJobs ProcessingJob[]
   exports        Export[]
+  athleteMarks   AthleteMark[]
 
   @@index([userId, createdAt])
   @@map("projects")
@@ -196,11 +200,30 @@ model MediaAsset {
   updatedAt         DateTime  @updatedAt
 
   processingJobs ProcessingJob[]
+  athleteMarks   AthleteMark[]
 
   @@index([projectId, createdAt])
   @@index([userId, createdAt])
   @@index([status, expiresAt])
   @@map("media_assets")
+}
+
+/// Clique do usuário sobre o atleta num quadro do vídeo (referência para reconhecê-lo).
+/// Coordenadas normalizadas (0–1) em relação à imagem do vídeo, independentes do tamanho da tela.
+model AthleteMark {
+  id            String     @id @default(cuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mediaAssetId  String
+  mediaAsset    MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  timeMs        Int
+  x             Float
+  y             Float
+  createdAt     DateTime   @default(now())
+
+  @@index([mediaAssetId, timeMs])
+  @@index([projectId])
+  @@map("athlete_marks")
 }
 
 enum ClipCategory {

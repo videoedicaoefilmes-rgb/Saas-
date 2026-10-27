@@ -82,6 +82,13 @@ Total: 119 testes Vitest + 5 E2E.
 6. O SeaweedFS esgotava seus "volumes" internos com os padrões de fábrica → limites ajustados.
 7. A criação do bucket podia falhar em silêncio se o servidor ainda não estivesse pronto → agora tenta de novo e falha de forma visível.
 
+## Sessão 2 (27/10/2026) — Identificação do atleta
+
+- Nova etapa **"Identificar o atleta"** no projeto (`/projetos/[id]/atleta`): a pessoa vai até um momento em que o atleta aparece, pausa e clica sobre ele. Guarda instante + ponto normalizado (0–1 sobre a imagem, sem faixas pretas), até 10 marcações por vídeo; cor e número da camisa opcionais. Marcações valem só para o vídeo atual (trocar o vídeo as invalida). Nada é desenhado nos cortes.
+- Modelo `AthleteMark` + campos `jerseyColor`/`jerseyNumber` em `Project` (migrações `athlete_marks` e `athlete_marks_check`).
+- Testes: 7 novos de integração (validação, limite, troca de vídeo, isolamento entre usuários) + etapa no E2E (marcador a menos de 3 px do clique; intruso recebe 404). Total: 122 Vitest + 5 E2E passando.
+- Ainda **não** existe a sugestão automática: aguardando vídeos reais no Google Drive ("Teste atleta") para o teste de precisão.
+
 ## Histórico
 
 - **Sessão 1 (2026-10-26):** planejamento, fundação, todo o MVP v1, testes e documentação; código publicado no GitHub; validação com Docker (7 correções) e guia `docs/GUIA_DOCKER.md` para não programadores.

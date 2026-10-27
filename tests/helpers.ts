@@ -8,7 +8,7 @@ import { auth } from "@/server/auth";
 /** Limpa todas as tabelas de domínio entre testes. */
 export async function resetDb(): Promise<void> {
   await db.$executeRawUnsafe(`
-    TRUNCATE TABLE "exports", "credit_transactions", "processing_jobs", "clips", "media_assets",
+    TRUNCATE TABLE "athlete_marks", "exports", "credit_transactions", "processing_jobs", "clips", "media_assets",
       "projects", "credit_wallets", "payments", "subscriptions", "plans", "webhook_events",
       "audit_logs", "app_settings", "sessions", "accounts", "verifications", "users" CASCADE`);
   await rm(path.resolve(getEnv().STORAGE_LOCAL_DIR), { recursive: true, force: true });

@@ -89,6 +89,26 @@ test.describe.serial("fluxo principal do MVP", () => {
     await expect(page.getByText("Vídeo pronto")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("01:00")).toBeVisible();
 
+    // Identificar o atleta: ir a um momento, pausar e clicar sobre ele
+    await page.getByRole("link", { name: "Identificar o atleta" }).click();
+    await expect(page.getByRole("heading", { name: "Identificar o atleta" })).toBeVisible();
+    const pick = page.getByTestId("athlete-pick-area");
+    await expect(pick).toBeVisible();
+    await page.getByRole("button", { name: "Avançar 5 segundos" }).click();
+    await page.getByRole("button", { name: "Avançar 5 segundos" }).click();
+    await expect(page.getByText(/^00:10 \/ 01:00$/)).toBeVisible();
+    const area = (await pick.boundingBox())!;
+    await page.mouse.click(area.x + area.width * 0.3, area.y + area.height * 0.4);
+    await expect(page.getByText(/Atleta marcado em 00:10/)).toBeVisible();
+    await expect(page.getByTestId("athlete-marks")).toContainText("Marcação 1");
+    // O marcador aparece exatamente onde foi clicado (30% / 40% da imagem)
+    const ring = pick.locator("span[aria-hidden]").first();
+    const r = (await ring.boundingBox())!;
+    expect(Math.abs(r.x + r.width / 2 - (area.x + area.width * 0.3))).toBeLessThan(3);
+    expect(Math.abs(r.y + r.height / 2 - (area.y + area.height * 0.4))).toBeLessThan(3);
+    await page.getByRole("link", { name: "Concluir" }).click();
+    await expect(page.getByText(/Atleta marcado em 1 momento/)).toBeVisible();
+
     // Três lances
     await page.getByRole("link", { name: "Abrir editor de lances" }).click();
     await expect(page.getByRole("heading", { name: "Editor de lances" })).toBeVisible();
@@ -164,7 +184,7 @@ test.describe.serial("fluxo principal do MVP", () => {
     const page = await context.newPage();
     await signUp(page, "Intruso", `intruso-${stamp}@teste.dev`);
 
-    for (const url of [projectUrl, `${projectUrl}/lances`, `${projectUrl}/processar`, jobUrl]) {
+    for (const url of [projectUrl, `${projectUrl}/atleta`, `${projectUrl}/lances`, `${projectUrl}/processar`, jobUrl]) {
       const res = await page.goto(url);
       expect(res?.status(), url).toBe(404);
       await expect(page.getByText("Página não encontrada")).toBeVisible();

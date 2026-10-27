@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Film, ListChecks, Pencil, Scissors } from "lucide-react";
+import { ArrowLeft, Film, ListChecks, Pencil, Scissors, UserRoundSearch } from "lucide-react";
 import { requireUser } from "@/server/session";
 import { AppError } from "@/server/errors";
 import { getEnv } from "@/server/env";
 import { getProjectDetail } from "@/server/services/projects";
+import { listAthleteMarks } from "@/server/services/athlete";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default async function ProjectPage({ params }: PageProps<"/projetos/[id]"
   const activeJob = processingJobs.find((j) => j.status === "QUEUED" || j.status === "RUNNING");
   const validating = asset && ["PENDING_UPLOAD", "UPLOADED", "PROBING"].includes(asset.status);
   const maxBytes = getEnv().UPLOAD_MAX_BYTES;
+  const athleteMarks = ready ? await listAthleteMarks(user.id, id) : [];
 
   const meta = [project.athleteName && `Atleta: ${project.athleteName}`, project.teamName, project.matchName, project.matchDate && formatDate(project.matchDate)].filter(Boolean);
 
@@ -97,7 +99,29 @@ export default async function ProjectPage({ params }: PageProps<"/projetos/[id]"
           )}
         </Step>
 
-        <Step n={2} title="Lances" done={clips.length > 0} icon={<ListChecks />}>
+        <Step n={2} title="Identificar o atleta" done={athleteMarks.length > 0} icon={<UserRoundSearch />}>
+          {!ready ? (
+            <p className="text-sm text-muted-foreground">Disponível depois que o vídeo for enviado e validado.</p>
+          ) : athleteMarks.length === 0 ? (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm text-muted-foreground">
+                Pause o vídeo num momento em que o atleta aparece e clique em cima dele. Isso vai alimentar a sugestão automática de lances (em desenvolvimento).
+              </p>
+              <ButtonLink href={`/projetos/${id}/atleta`} variant="secondary">Identificar o atleta</ButtonLink>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm">
+                Atleta marcado em <strong>{athleteMarks.length}</strong> momento(s) do vídeo
+                {project.jerseyNumber ? ` · camisa ${project.jerseyNumber}` : ""}
+                {project.jerseyColor ? ` · ${project.jerseyColor}` : ""}.
+              </p>
+              <ButtonLink href={`/projetos/${id}/atleta`} variant="secondary" size="sm">Ver ou alterar</ButtonLink>
+            </div>
+          )}
+        </Step>
+
+        <Step n={3} title="Lances" done={clips.length > 0} icon={<ListChecks />}>
           {clips.length === 0 ? (
             <div className="flex flex-col items-start gap-3">
               <p className="text-sm text-muted-foreground">Marque o início e o fim de cada lance que você quer cortar.</p>
@@ -122,7 +146,7 @@ export default async function ProjectPage({ params }: PageProps<"/projetos/[id]"
           )}
         </Step>
 
-        <Step n={3} title="Processar e baixar" done={processingJobs.some((j) => j.status === "SUCCEEDED")} icon={<Scissors />}>
+        <Step n={4} title="Processar e baixar" done={processingJobs.some((j) => j.status === "SUCCEEDED")} icon={<Scissors />}>
           <div className="flex flex-col gap-4">
             {activeJob ? (
               <ButtonLink href={`/processamentos/${activeJob.id}`} className="self-start">Acompanhar processamento</ButtonLink>
